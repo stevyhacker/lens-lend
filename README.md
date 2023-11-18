@@ -1,9 +1,7 @@
-# Foundry Template [![Open in Gitpod][gitpod-badge]][gitpod] [![Github Actions][gha-badge]][gha] [![Foundry][foundry-badge]][foundry] [![License: MIT][license-badge]][license]
+# Lens Lend
 
-[gitpod]: https://gitpod.io/#https://github.com/stevyhacker/lens-lend
-[gitpod-badge]: https://img.shields.io/badge/Gitpod-Open%20in%20Gitpod-FFB45B?logo=gitpod
-[gha]: https://github.com/stevyhacker/lens-lend/actions
-[gha-badge]: https://github.com/stevyhacker/lens-lend/actions/workflows/ci.yml/badge.svg
+[![Foundry][foundry-badge]][foundry] [![License: MIT][license-badge]][license]
+
 [foundry]: https://getfoundry.sh/
 [foundry-badge]: https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg
 [license]: https://opensource.org/licenses/MIT
@@ -20,19 +18,6 @@ A Foundry-based template for developing Solidity smart contracts, with sensible 
 - [Prettier](https://github.com/prettier/prettier): code formatter for non-Solidity files
 - [Solhint Community](https://github.com/solhint-community/solhint-community): linter for Solidity code
 
-## Getting Started
-
-Click the [`Use this template`](https://github.com/PaulRBerg/foundry-template/generate) button at the top of the page to
-create a new repository with this repo as the initial state.
-
-Or, if you prefer to install the template manually:
-
-```sh
-$ mkdir my-project
-$ cd my-project
-$ forge init --template PaulRBerg/foundry-template
-$ pnpm install # install Solhint, Prettier, and other Node.js deps
-```
 
 If this is your first time with Foundry, check out the
 [installation](https://github.com/foundry-rs/foundry#installation) instructions.
