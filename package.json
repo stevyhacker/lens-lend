@@ -31,6 +31,7 @@
     "test:coverage:report": "forge coverage --report lcov && genhtml lcov.info --branch-coverage --output-dir coverage"
   },
   "dependencies": {
+    "@chainlink/contracts": "^0.8.0",
     "solhint": "^3.6.2"
   }
 }

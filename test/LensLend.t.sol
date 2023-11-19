@@ -6,6 +6,7 @@ import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 
 import { LensLend } from "../src/LensLend.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
@@ -14,14 +15,18 @@ interface IERC20 {
 
 contract LensLendTest is PRBTest, StdCheats {
     LensLend internal lensLend;
+    // deploy a mock chainlink aggregator contract and paste the address here
+    AggregatorV3Interface internal nftFloorPriceFeed;
 
     /// @dev A function invoked before each test case is run.
     function setUp() public virtual {
-        // Instantiate the contract-under-test.
+        //mock the chainlink nft price oracle
+        nftFloorPriceFeed = AggregatorV3Interface(address(0x0));
+
         lensLend = new LensLend(
             address(0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359), // USDC on Polygon
             address(0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d), // Lens Profile Collection on Polygon
-            address("todo deploy the aggregator contract and paste the address here")
+            address(nftFloorPriceFeed)
         );
 
         string memory alchemyApiKey = vm.envOr("API_KEY_ALCHEMY", string(""));

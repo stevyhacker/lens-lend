@@ -34,7 +34,7 @@ contract LensLend is Ownable {
     IERC721 public immutable lensProfileCollection;
     AggregatorV3Interface internal nftFloorPriceFeed;
 
-    constructor(address _usdcAddress, address _lensProfileCollection, address _nftFloorPriceFeed) {
+    constructor(address _usdcAddress, address _lensProfileCollection, address _nftFloorPriceFeed) Ownable(msg.sender) {
         usdc = IERC20(_usdcAddress);
         lensProfileCollection = IERC721(_lensProfileCollection);
         nftFloorPriceFeed = AggregatorV3Interface(_nftFloorPriceFeed);
@@ -57,7 +57,7 @@ contract LensLend is Ownable {
     function removeBorrower(uint256 _profileId) external {
         require(lensProfileCollection.ownerOf(_profileId) == msg.sender, "Only the owner can remove a Lens profile");
         require(lensBorrowers[_profileId].profileId != 0, "Lens profile not added");
-        require(borrower.debt == 0, "Lens profile has unpaid debt");
+        require(lensBorrowers[_profileId].debt == 0, "Lens profile has unpaid debt");
 
         delete lensBorrowers[_profileId];
     }
@@ -95,9 +95,9 @@ contract LensLend is Ownable {
     }
 
     /// @notice Function to get the max potential amount of debt a Lens profile can borrow
-    function getMaxPotentialDebt(uint256 _profileId) external view returns (uint256) {
+    function getMaxPotentialDebt(uint256 _profileId) public view returns (uint256) {
         uint256 currentDebt = lensBorrowers[_profileId].debt;
-        uint256 maxAmount = getReputation(_profileId) * getLatestFloorPrice();
+        uint256 maxAmount = getReputation(_profileId) * uint256(getLatestFloorPrice());
 
         return maxAmount - currentDebt;
     }
@@ -147,8 +147,8 @@ contract LensLend is Ownable {
 
     /// @notice Updates the interest for the USDC lenders
     /// @dev This function can be called every 24h
-    function updateSuppliedBalance(address lender) public {
-        UsdcLender storage lender = lenders[lender];
+    function updateSuppliedBalance(address _lender) public {
+        UsdcLender storage lender = lenders[_lender];
 
         uint256 timeSinceLastUpdate = block.timestamp - lender.lastUpdated;
         require(timeSinceLastUpdate < 24 hours, "Cannot update debt more than once per day");
@@ -170,7 +170,7 @@ contract LensLend is Ownable {
         /* uint startedAt */,
         /* uint timeStamp */,
         /* uint80 answeredInRound */
-        ) = priceFeed.latestRoundData();
+        ) = nftFloorPriceFeed.latestRoundData();
         return floorPrice;
     }
 
