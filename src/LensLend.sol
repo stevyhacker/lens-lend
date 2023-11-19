@@ -4,10 +4,12 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title LensLend
 /// @notice Lend USDC against Lens profile NFTs
-contract LensLend {
+contract LensLend is Ownable {
 
     struct LensBorrower {
         uint256 profileId;
@@ -25,14 +27,17 @@ contract LensLend {
     mapping(uint256 profileId => LensBorrower) public lensBorrowers;
     mapping(address user => UsdcLender) public lenders;
 
-    uint256 public yearlyInterestRate = 1e17; // 10% per year
+    uint256 public yearlyBorrowInterestRate = 1e17; // 10% per year
+    uint256 public yearlySupplyInterestRate = 8e16; // 8% per year
 
     IERC20 public immutable usdc;
     IERC721 public immutable lensProfileCollection;
+    AggregatorV3Interface internal nftFloorPriceFeed;
 
-    constructor(address _usdcAddress, address _lensProfileCollection) {
+    constructor(address _usdcAddress, address _lensProfileCollection, address _nftFloorPriceFeed) {
         usdc = IERC20(_usdcAddress);
         lensProfileCollection = IERC721(_lensProfileCollection);
+        nftFloorPriceFeed = AggregatorV3Interface(_nftFloorPriceFeed);
     }
 
     /// @notice Adds a Lens profile to the lending pool
@@ -52,27 +57,32 @@ contract LensLend {
     function removeBorrower(uint256 _profileId) external {
         require(lensProfileCollection.ownerOf(_profileId) == msg.sender, "Only the owner can remove a Lens profile");
         require(lensBorrowers[_profileId].profileId != 0, "Lens profile not added");
+        require(borrower.debt == 0, "Lens profile has unpaid debt");
 
         delete lensBorrowers[_profileId];
     }
 
     // Function to borrow USDC against Lens profile NFT
-    function borrow(uint256 _tokenId, uint256 _amount) external {
-        require(lensProfileCollection.ownerOf(_tokenId) == msg.sender, "Only the owner can borrow");
-        LensBorrower storage borrower = lensBorrowers[_tokenId];
-
-        require(borrower.debt == 0, "Lens profile already borrowed the maximum amount");
+    function borrow(uint256 _profileId, uint256 _amount) external {
+        require(lensProfileCollection.ownerOf(_profileId) == msg.sender, "Only the owner can borrow");
         require(usdc.balanceOf(address(this)) >= _amount, "Insufficient USDC balance in the lending pool");
 
+        LensBorrower storage borrower = lensBorrowers[_profileId];
+
+        require(borrower.debt + _amount < getMaxPotentialDebt(_profileId), "Lens profile already borrowed the maximum amount");
+
         borrower.debt += _amount;
-        lensBorrowers[_tokenId] = borrower;
+        lensBorrowers[_profileId] = borrower;
         usdc.transferFrom(msg.sender, address(this), _amount);
     }
 
     /// @notice Repays borrowed USDC debt of a lens profile borrower
-    function repayDebt(uint256 _tokenId, uint256 _amount) external {
-        LensBorrower storage borrower = lensBorrowers[_tokenId];
+    function repayDebt(uint256 _profileId, uint256 _amount) external {
+        LensBorrower storage borrower = lensBorrowers[_profileId];
         require(borrower.debt >= _amount, "Exceeds borrowed balance");
+
+        updateDebt(_profileId);
+
         borrower.debt -= _amount;
         usdc.transfer(msg.sender, _amount);
     }
@@ -84,9 +94,12 @@ contract LensLend {
         return lensBorrowers[_tokenId].reputation;
     }
 
-    // Function to get the debt balance of a Lens profile
-    function getDebt(uint256 _tokenId) external view returns (uint256) {
-        return lensBorrowers[_tokenId].debt;
+    /// @notice Function to get the max potential amount of debt a Lens profile can borrow
+    function getMaxPotentialDebt(uint256 _profileId) external view returns (uint256) {
+        uint256 currentDebt = lensBorrowers[_profileId].debt;
+        uint256 maxAmount = getReputation(_profileId) * getLatestFloorPrice();
+
+        return maxAmount - currentDebt;
     }
 
     /// @notice Lenders can supply USDC to the lending pool
@@ -107,6 +120,8 @@ contract LensLend {
 
         UsdcLender storage lender = lenders[msg.sender];
 
+        updateSuppliedBalance(msg.sender);
+
         lender.suppliedBalance -= _amount;
         lenders[msg.sender] = lender;
 
@@ -115,14 +130,14 @@ contract LensLend {
 
     /// @notice Update debt of the borrowers with the current interest rate
     /// @dev This function can be called every 24h
-    function updateDebt(uint256 _profileId) internal {
+    function updateDebt(uint256 _profileId) public {
         LensBorrower storage borrower = lensBorrowers[_profileId];
 
         uint256 timeSinceLastUpdate = block.timestamp - borrower.lastUpdated;
         require(timeSinceLastUpdate < 24 hours, "Cannot update debt more than once per day");
 
         uint256 currentDebt = borrower.debt;
-        uint256 interestRate = yearlyInterestRate * (timeSinceLastUpdate / 365 days);
+        uint256 interestRate = yearlyBorrowInterestRate * (timeSinceLastUpdate / 365 days);
         uint256 accruedInterest = currentDebt * interestRate;
 
         require(usdc.balanceOf(address(this)) >= accruedInterest, "Insufficient USDC balance in the lending pool");
@@ -130,6 +145,39 @@ contract LensLend {
         borrower.debt += accruedInterest;
     }
 
+    /// @notice Updates the interest for the USDC lenders
+    /// @dev This function can be called every 24h
+    function updateSuppliedBalance(address lender) public {
+        UsdcLender storage lender = lenders[lender];
+
+        uint256 timeSinceLastUpdate = block.timestamp - lender.lastUpdated;
+        require(timeSinceLastUpdate < 24 hours, "Cannot update debt more than once per day");
+
+        uint256 currentBalance = lender.suppliedBalance;
+        uint256 interestRate = yearlySupplyInterestRate * (timeSinceLastUpdate / 365 days);
+        uint256 accruedReward = currentBalance * interestRate;
+
+        require(usdc.balanceOf(address(this)) >= accruedReward, "Insufficient USDC balance in the lending pool");
+        lender.lastUpdated = block.timestamp;
+        lender.suppliedBalance += accruedReward;
+    }
+
+    /// @notice Returns the latest Lens Profile NFT collection floor price
+    function getLatestFloorPrice() public view returns (int) {
+        (
+        /* uint80 roundID */,
+            int floorPrice,
+        /* uint startedAt */,
+        /* uint timeStamp */,
+        /* uint80 answeredInRound */
+        ) = priceFeed.latestRoundData();
+        return floorPrice;
+    }
+
+    /// @notice Owner can claim the profit from the borrowers
+    function claimProfit() external onlyOwner {
+        //todo: calculate the profit from the borrowers and claim it
+    }
 
     /// @dev Liquidate a Lens profile borrower if their debt is too high
     function liquidate(uint256 _profileId) external {

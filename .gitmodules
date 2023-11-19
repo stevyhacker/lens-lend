@@ -7,5 +7,8 @@
   path = "lib/prb-test"
   url = "https://github.com/PaulRBerg/prb-test"
 [submodule "lib/openzeppelin-contracts"]
-	path = lib/openzeppelin-contracts
-	url = https://github.com/openzeppelin/openzeppelin-contracts
+	path = "lib/openzeppelin-contracts"
+	url = "https://github.com/openzeppelin/openzeppelin-contracts"
+[submodule "lib/chainlink-contracts"]
+	path = "lib/chainlink-contracts"
+	url = "https://github.com/smartcontractkit/chainlink/"

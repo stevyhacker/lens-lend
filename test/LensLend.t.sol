@@ -20,7 +20,8 @@ contract LensLendTest is PRBTest, StdCheats {
         // Instantiate the contract-under-test.
         lensLend = new LensLend(
             address(0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359), // USDC on Polygon
-            address(0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d) // Lens Profile Collection on Polygon
+            address(0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d), // Lens Profile Collection on Polygon
+            address("todo deploy the aggregator contract and paste the address here")
         );
 
         string memory alchemyApiKey = vm.envOr("API_KEY_ALCHEMY", string(""));
