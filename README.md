@@ -7,9 +7,11 @@
 [license]: https://opensource.org/licenses/MIT
 [license-badge]: https://img.shields.io/badge/License-MIT-blue.svg
 
-A Foundry-based template for developing Solidity smart contracts, with sensible defaults.
+Borrow USDC using Lens profile NFTs as collateral.
 
 ## What's Inside
+
+A Foundry-based template for developing Solidity smart contracts, with sensible defaults.
 
 - [Forge](https://github.com/foundry-rs/foundry/blob/master/forge): compile, test, fuzz, format, and deploy smart
   contracts
@@ -73,6 +75,15 @@ This template comes with an example test contract [Foo.t.sol](./test/Foo.t.sol)
 ## Usage
 
 This is a list of the most frequently needed commands.
+
+### Install
+
+Install the dependencies:
+
+```sh
+$ pnpm install
+$ forge install
+```
 
 ### Build
 

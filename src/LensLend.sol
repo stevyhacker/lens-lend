@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.21;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -24,8 +24,8 @@ contract LensLend is Ownable {
         uint256 lastUpdated;
     }
 
-    mapping(uint256 profileId => LensBorrower) public lensBorrowers;
-    mapping(address user => UsdcLender) public lenders;
+    mapping(uint256 profileId => LensBorrower borrower) public lensBorrowers;
+    mapping(address account => UsdcLender lender) public lenders;
 
     uint256 public yearlyBorrowInterestRate = 1e17; // 10% per year
     uint256 public yearlySupplyInterestRate = 8e16; // 8% per year

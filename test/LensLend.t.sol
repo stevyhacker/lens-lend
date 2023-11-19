@@ -12,7 +12,6 @@ interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 }
 
-
 contract LensLendTest is PRBTest, StdCheats {
     LensLend internal lensLend;
     // deploy a mock chainlink aggregator contract and paste the address here
@@ -49,7 +48,6 @@ contract LensLendTest is PRBTest, StdCheats {
 
         address actualLensProfile = address(lensLend.lensProfileCollection());
         address actualUsdc = address(lensLend.usdc());
-//        uint256 actualBalance = IERC20(usdc).balanceOf(holder);
 
         assertEq(actualUsdc, expectedUsdc);
         assertEq(actualLensProfile, expectedLensProfile);
